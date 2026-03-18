@@ -6,118 +6,432 @@ interface PreviewViewProps {
   data: InvoiceData;
 }
 
+// ─── Design tokens ─────────────────────────────────────────────────────────
+const C = {
+  ink:       '#0F1923',
+  inkMid:    '#3D4F5C',
+  inkLight:  '#7A8F9E',
+  accent:    '#1A56DB',
+  accentDark:'#1240A8',
+  accentBg:  '#EEF3FF',
+  gold:      '#B8832A',
+  border:    '#DDE3EA',
+  rowAlt:    '#F7F9FC',
+  white:     '#FFFFFF',
+  danger:    '#C8312A',
+  headBg:    '#0D1B2A',
+};
+
+// ─── Style objects (all inline — Tailwind-free for html2canvas reliability) ─
+const S: Record<string, React.CSSProperties> = {
+  // Root page — fixed A4-ish width
+  page: {
+    width: '794px',
+    backgroundColor: C.white,
+    fontFamily: '"Plus Jakarta Sans", "Helvetica Neue", Helvetica, Arial, sans-serif',
+    fontSize: '13px',
+    color: C.ink,
+    boxSizing: 'border-box',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+
+  // ── Header ──────────────────────────────────────────────
+  header: {
+    background: `linear-gradient(140deg, ${C.headBg} 0%, #122640 55%, #0D3461 100%)`,
+    padding: '30px 40px 26px',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  orb1: {
+    position: 'absolute',
+    top: '-70px', right: '-50px',
+    width: '230px', height: '230px',
+    borderRadius: '50%',
+    background: C.accent,
+    opacity: 0.2,
+    filter: 'blur(50px)',
+  },
+  orb2: {
+    position: 'absolute',
+    bottom: '-40px', left: '35%',
+    width: '160px', height: '160px',
+    borderRadius: '50%',
+    background: '#3B82F6',
+    opacity: 0.12,
+    filter: 'blur(35px)',
+  },
+  headerInner: {
+    position: 'relative',
+    zIndex: 1,
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: '20px',
+  },
+  logoBox: {
+    width: '58px', height: '58px',
+    backgroundColor: C.white,
+    borderRadius: '12px',
+    padding: '6px',
+    boxSizing: 'border-box',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
+    overflow: 'hidden',
+  },
+  companyRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '14px',
+  },
+  companyName: {
+    color: C.white,
+    fontSize: '19px',
+    fontWeight: 800,
+    letterSpacing: '-0.3px',
+    lineHeight: 1.2,
+    margin: 0,
+    padding: 0,
+  },
+  companyMeta: {
+    color: 'rgba(255,255,255,0.50)',
+    fontSize: '11px',
+    marginTop: '4px',
+    lineHeight: 1.5,
+  },
+  notaBadge: {
+    textAlign: 'right',
+    flexShrink: 0,
+  },
+  notaWord: {
+    color: '#60A5FA',
+    fontSize: '30px',
+    fontWeight: 900,
+    letterSpacing: '7px',
+    textTransform: 'uppercase',
+    lineHeight: 1,
+    margin: 0,
+    padding: 0,
+  },
+  notaNumLine: {
+    color: 'rgba(255,255,255,0.50)',
+    fontSize: '11px',
+    marginTop: '6px',
+    letterSpacing: '0.3px',
+  },
+  notaNumVal: {
+    color: C.white,
+    fontWeight: 700,
+  },
+
+  // Accent stripe
+  stripe: {
+    height: '4px',
+    background: `linear-gradient(90deg, ${C.accent} 0%, #60A5FA 50%, ${C.accent} 100%)`,
+  },
+
+  // ── Body ──────────────────────────────────────────────────
+  body: {
+    padding: '26px 40px 30px',
+  },
+
+  // Meta info grid
+  metaGrid: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    border: `1.5px solid ${C.border}`,
+    borderRadius: '10px',
+    overflow: 'hidden',
+    marginBottom: '22px',
+  },
+  metaCell: {
+    padding: '10px 15px',
+    borderBottom: `1px solid ${C.border}`,
+    borderRight: `1px solid ${C.border}`,
+    boxSizing: 'border-box',
+  },
+  metaLabel: {
+    color: C.inkLight,
+    fontSize: '9.5px',
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: '0.7px',
+    marginBottom: '2px',
+  },
+  metaValue: {
+    color: C.ink,
+    fontSize: '12px',
+    fontWeight: 600,
+    lineHeight: 1.3,
+  },
+
+  // Section label
+  sectionLabel: {
+    fontSize: '9.5px',
+    fontWeight: 800,
+    color: C.inkLight,
+    textTransform: 'uppercase',
+    letterSpacing: '1px',
+    marginBottom: '9px',
+  },
+
+  // Items table
+  tableWrap: {
+    border: `1.5px solid ${C.border}`,
+    borderRadius: '10px',
+    overflow: 'hidden',
+    marginBottom: '22px',
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    tableLayout: 'fixed',
+  },
+  thead: {
+    backgroundColor: C.headBg,
+  },
+  th: {
+    padding: '9px 13px',
+    fontSize: '9.5px',
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    color: 'rgba(255,255,255,0.60)',
+    whiteSpace: 'nowrap',
+  },
+  td: {
+    padding: '10px 13px',
+    borderBottom: `1px solid ${C.border}`,
+    fontSize: '12px',
+    verticalAlign: 'middle',
+    lineHeight: 1.4,
+  },
+  tdLast: {
+    borderBottom: 'none',
+  },
+
+  // Footer
+  footerArea: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    gap: '24px',
+  },
+
+  // Signatures
+  sigWrap: { display: 'flex', gap: '28px', alignItems: 'flex-end' },
+  sigBox: { textAlign: 'center', width: '108px' },
+  sigSpace: { height: '50px' },
+  sigLine: { borderTop: `1.5px solid ${C.inkMid}`, marginBottom: '5px' },
+  sigLabel: { fontSize: '10.5px', color: C.inkMid, fontWeight: 600, lineHeight: 1.4 },
+  sigName: { fontWeight: 800, color: C.ink },
+
+  // LUNAS stamp
+  stampWrap: { marginBottom: '14px' },
+  stamp: {
+    display: 'inline-block',
+    border: `2.5px solid ${C.gold}`,
+    borderRadius: '6px',
+    padding: '5px 13px',
+    transform: 'rotate(-14deg)',
+  },
+  stampText: {
+    fontSize: '20px',
+    fontWeight: 900,
+    color: C.gold,
+    letterSpacing: '5px',
+    textTransform: 'uppercase',
+    lineHeight: 1,
+    opacity: 0.88,
+  },
+
+  // Totals box
+  totalsBox: {
+    width: '256px',
+    flexShrink: 0,
+    border: `1.5px solid ${C.border}`,
+    borderRadius: '10px',
+    overflow: 'hidden',
+  },
+  totalsRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '9px 15px',
+    borderBottom: `1px solid ${C.border}`,
+    fontSize: '12px',
+  },
+  totalsLabel: { color: C.inkLight },
+  totalsVal: { fontWeight: 600, color: C.ink },
+  totalsFinal: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '11px 15px',
+    background: `linear-gradient(135deg, ${C.accent}, ${C.accentDark})`,
+  },
+  totalsFinalLabel: { color: C.white, fontSize: '14px', fontWeight: 800 },
+  totalsFinalVal: { color: C.white, fontSize: '15px', fontWeight: 900 },
+
+  // Note
+  note: {
+    marginTop: '26px',
+    paddingTop: '14px',
+    borderTop: `1.5px dashed ${C.border}`,
+    textAlign: 'center',
+    color: C.inkLight,
+    fontSize: '10px',
+    lineHeight: 1.7,
+  },
+
+  // Bottom-right corner decoration
+  cornerTri: {
+    position: 'absolute',
+    bottom: 0, right: 0,
+    width: '100px', height: '100px',
+    background: `linear-gradient(135deg, transparent 50%, ${C.accentBg} 50%)`,
+    pointerEvents: 'none',
+  },
+  cornerDot: {
+    position: 'absolute',
+    bottom: '13px', right: '13px',
+    width: '7px', height: '7px',
+    borderRadius: '50%',
+    backgroundColor: C.accent,
+    opacity: 0.35,
+    pointerEvents: 'none',
+  },
+};
+
+// ──────────────────────────────────────────────────────────────────────────
+
 export const PreviewView = forwardRef<HTMLDivElement, PreviewViewProps>(({ data }, ref) => {
-  const subtotal = data.items.reduce((acc, item) => {
-    return acc + (Number(item.qty) || 0) * (Number(item.price) || 0);
-  }, 0);
+  const subtotal     = data.items.reduce((a, item) => a + (Number(item.qty) || 0) * (Number(item.price) || 0), 0);
   const discountRate = Number(data.discountRate) || 0;
-  const taxRate = Number(data.taxRate) || 0;
-  const discountAmt = subtotal * (discountRate / 100);
-  const afterDisc = subtotal - discountAmt;
-  const taxAmt = afterDisc * (taxRate / 100);
-  const total = afterDisc + taxAmt;
+  const taxRate      = Number(data.taxRate) || 0;
+  const discountAmt  = subtotal * (discountRate / 100);
+  const afterDisc    = subtotal - discountAmt;
+  const taxAmt       = afterDisc * (taxRate / 100);
+  const total        = afterDisc + taxAmt;
+
+  const meta = [
+    { label: 'Tanggal Transaksi',  value: formatDate(data.transactionDate) },
+    { label: 'Nama Pelanggan',     value: data.customerName    || '—' },
+    { label: 'Metode Pembayaran',  value: data.paymentMethod   || '—' },
+    { label: 'Alamat Pelanggan',   value: data.customerAddress || '—' },
+  ];
 
   return (
-    <div
-      ref={ref}
-      className="bg-white border border-slate-200 rounded-2xl overflow-hidden print:shadow-none print:border-none print:rounded-none"
-      style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
-    >
-      {/* ── Dark header ── */}
-      <div
-        className="relative bg-slate-900 text-white px-8 py-8 overflow-hidden"
-        style={{
-          WebkitPrintColorAdjust: 'exact',
-          // @ts-ignore
-          colorAdjust: 'exact',
-          printColorAdjust: 'exact',
-        }}
-      >
-        {/* Decorative blob */}
-        <div
-          className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-20 -translate-y-1/2 translate-x-1/3"
-          style={{ background: '#2563eb', filter: 'blur(60px)' }}
-        />
-        <div className="relative z-10 flex flex-row items-start justify-between gap-5 flex-wrap">
-          {/* Company info */}
-          <div className="flex items-center gap-4 min-w-0">
+    <div ref={ref} style={S.page}>
+
+      {/* ═══ HEADER ═══════════════════════════════════════════ */}
+      <div style={S.header}>
+        <div style={S.orb1} />
+        <div style={S.orb2} />
+
+        <div style={S.headerInner}>
+          {/* Company side */}
+          <div style={S.companyRow}>
             {data.logo && (
-              <div className="bg-white p-2 rounded-xl shadow-sm shrink-0">
-                <img src={data.logo} alt="Logo" className="w-14 h-14 object-contain" />
+              <div style={S.logoBox}>
+                <img src={data.logo} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
               </div>
             )}
-            <div className="min-w-0">
-              <div className="text-xl font-extrabold tracking-tight text-white truncate max-w-[300px]">
-                {data.companyName || 'Nama Perusahaan'}
-              </div>
-              {data.companyAddress && (
-                <div className="text-xs text-slate-300 mt-0.5 truncate max-w-[300px]">{data.companyAddress}</div>
-              )}
-              {data.companyContact && (
-                <div className="text-xs text-slate-300 truncate max-w-[300px]">{data.companyContact}</div>
-              )}
+            <div>
+              <p style={S.companyName}>{data.companyName || 'Nama Perusahaan'}</p>
+              <p style={S.companyMeta}>
+                {[data.companyAddress, data.companyContact].filter(Boolean).join('  ·  ') || ' '}
+              </p>
             </div>
           </div>
 
-          {/* NOTA badge */}
-          <div className="text-right shrink-0">
-            <div className="text-3xl font-extrabold text-blue-400 tracking-widest uppercase">NOTA</div>
-            <div className="text-xs text-slate-300 mt-1">
-              No: <span className="text-white font-semibold">{data.notaNumber || '—'}</span>
-            </div>
+          {/* NOTA side */}
+          <div style={S.notaBadge}>
+            <p style={S.notaWord}>NOTA</p>
+            <p style={S.notaNumLine}>
+              No: <span style={S.notaNumVal}>{data.notaNumber || '—'}</span>
+            </p>
           </div>
         </div>
       </div>
 
-      {/* ── Body ── */}
-      <div className="px-8 py-7 text-[13px] text-slate-900 bg-white">
-        {/* Meta grid */}
-        <div className="grid grid-cols-2 gap-x-6 gap-y-2 mb-7 p-5 bg-slate-50 rounded-xl border border-slate-100">
-          <MetaRow label="Tanggal" value={formatDate(data.transactionDate)} />
-          <MetaRow label="Pelanggan" value={data.customerName || '—'} />
-          <MetaRow label="Metode Pembayaran" value={data.paymentMethod || '—'} />
-          {data.customerAddress && (
-            <MetaRow label="Alamat Pelanggan" value={data.customerAddress} />
-          )}
+      {/* Accent stripe */}
+      <div style={S.stripe} />
+
+      {/* ═══ BODY ═════════════════════════════════════════════ */}
+      <div style={S.body}>
+
+        {/* Meta grid — 2×2 */}
+        <div style={S.metaGrid}>
+          {meta.map((m, i) => {
+            const isBottom = i >= 2;
+            const isRight  = i % 2 === 1;
+            return (
+              <div
+                key={m.label}
+                style={{
+                  ...S.metaCell,
+                  ...(isBottom ? { borderBottom: 'none' } : {}),
+                  ...(isRight  ? { borderRight: 'none'  } : {}),
+                }}
+              >
+                <div style={S.metaLabel}>{m.label}</div>
+                <div style={S.metaValue}>{m.value}</div>
+              </div>
+            );
+          })}
         </div>
 
+        {/* Section label */}
+        <div style={S.sectionLabel}>Rincian Barang / Jasa</div>
+
         {/* Items table */}
-        <div className="border border-slate-200 rounded-xl overflow-hidden mb-7">
-          <table className="w-full border-collapse text-[12.5px]">
-            <thead>
+        <div style={S.tableWrap}>
+          <table style={S.table}>
+            <colgroup>
+              <col style={{ width: '30px' }} />
+              <col />
+              <col style={{ width: '44px' }} />
+              <col style={{ width: '64px' }} />
+              <col style={{ width: '118px' }} />
+              <col style={{ width: '118px' }} />
+            </colgroup>
+            <thead style={S.thead}>
               <tr>
-                {['No', 'Barang / Jasa', 'Qty', 'Satuan', 'Harga Satuan', 'Total'].map((h, i) => (
-                  <th
-                    key={h}
-                    className="bg-slate-100 p-3 text-[10.5px] font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200"
-                    style={{
-                      textAlign: i === 0 ? 'center' : i >= 4 ? 'right' : i === 2 ? 'center' : 'left',
-                      width: i === 0 ? 36 : i === 2 ? 48 : i === 3 ? 80 : i === 4 ? 110 : i === 5 ? 110 : undefined,
-                    }}
-                  >
-                    {h}
-                  </th>
-                ))}
+                <th style={{ ...S.th, textAlign: 'center'  }}>#</th>
+                <th style={{ ...S.th, textAlign: 'left'   }}>Nama Barang / Jasa</th>
+                <th style={{ ...S.th, textAlign: 'center'  }}>Qty</th>
+                <th style={{ ...S.th, textAlign: 'left'   }}>Satuan</th>
+                <th style={{ ...S.th, textAlign: 'right'  }}>Harga Satuan</th>
+                <th style={{ ...S.th, textAlign: 'right'  }}>Total</th>
               </tr>
             </thead>
             <tbody>
               {data.items.map((item, i) => {
-                const qty = Number(item.qty) || 0;
-                const price = Number(item.price) || 0;
+                const qty       = Number(item.qty)   || 0;
+                const price     = Number(item.price) || 0;
                 const lineTotal = qty * price;
+                const isLast    = i === data.items.length - 1;
+                const rowBg     = i % 2 === 1 ? C.rowAlt : C.white;
+
                 return (
-                  <tr
-                    key={item.id}
-                    className={i % 2 === 1 ? 'bg-slate-50/60' : 'bg-white'}
-                  >
-                    <td className="p-3 text-center text-slate-500 border-b border-slate-100">{i + 1}</td>
-                    <td className="p-3 border-b border-slate-100 font-medium text-slate-900">
+                  <tr key={item.id} style={{ backgroundColor: rowBg }}>
+                    <td style={{ ...S.td, ...(isLast ? S.tdLast : {}), textAlign: 'center', color: C.inkLight, fontSize: '11px', fontWeight: 600 }}>
+                      {i + 1}
+                    </td>
+                    <td style={{ ...S.td, ...(isLast ? S.tdLast : {}), fontWeight: 600, color: C.ink }}>
                       {item.name || '—'}
                     </td>
-                    <td className="p-3 text-center border-b border-slate-100 text-slate-700">{qty}</td>
-                    <td className="p-3 border-b border-slate-100 text-slate-500">{item.unit || '—'}</td>
-                    <td className="p-3 text-right border-b border-slate-100 text-slate-700">{formatRp(price)}</td>
-                    <td className="p-3 text-right border-b border-slate-100 font-semibold text-slate-900">
+                    <td style={{ ...S.td, ...(isLast ? S.tdLast : {}), textAlign: 'center', fontWeight: 600 }}>
+                      {qty}
+                    </td>
+                    <td style={{ ...S.td, ...(isLast ? S.tdLast : {}), color: C.inkLight, fontSize: '11.5px' }}>
+                      {item.unit || '—'}
+                    </td>
+                    <td style={{ ...S.td, ...(isLast ? S.tdLast : {}), textAlign: 'right', color: C.inkMid }}>
+                      {formatRp(price)}
+                    </td>
+                    <td style={{ ...S.td, ...(isLast ? S.tdLast : {}), textAlign: 'right', fontWeight: 700, color: C.ink }}>
                       {formatRp(lineTotal)}
                     </td>
                   </tr>
@@ -127,91 +441,70 @@ export const PreviewView = forwardRef<HTMLDivElement, PreviewViewProps>(({ data 
           </table>
         </div>
 
-        {/* Footer: signatures + totals */}
-        <div className="flex flex-col sm:flex-row justify-between items-start gap-6 mt-6">
-          {/* Signatures */}
-          <div className="flex gap-10">
-            <SignatureBox label="Pelanggan" />
-            <SignatureBox label={`Kasir: ${data.cashierName || '—'}`} />
+        {/* ─ Footer: stamp+sigs left | totals right ─ */}
+        <div style={S.footerArea}>
+
+          {/* Left */}
+          <div>
+            <div style={S.stampWrap}>
+              <div style={S.stamp}>
+                <div style={S.stampText}>LUNAS</div>
+              </div>
+            </div>
+            <div style={S.sigWrap}>
+              <div style={S.sigBox}>
+                <div style={S.sigSpace} />
+                <div style={S.sigLine} />
+                <div style={S.sigLabel}>Pelanggan</div>
+              </div>
+              <div style={S.sigBox}>
+                <div style={S.sigSpace} />
+                <div style={S.sigLine} />
+                <div style={S.sigLabel}>
+                  Kasir<br />
+                  <span style={S.sigName}>{data.cashierName || '—'}</span>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Totals */}
-          <div className="min-w-[240px] w-full sm:w-auto bg-slate-50 rounded-xl border border-slate-100 overflow-hidden">
-            <TotalRow label="Subtotal" value={formatRp(subtotal)} />
+          {/* Right: totals */}
+          <div style={S.totalsBox}>
+            <div style={S.totalsRow}>
+              <span style={S.totalsLabel}>Subtotal</span>
+              <span style={S.totalsVal}>{formatRp(subtotal)}</span>
+            </div>
             {discountRate > 0 && (
-              <TotalRow
-                label={`Diskon (${discountRate}%)`}
-                value={`− ${formatRp(discountAmt)}`}
-                valueClass="text-red-500"
-              />
+              <div style={S.totalsRow}>
+                <span style={S.totalsLabel}>Diskon ({discountRate}%)</span>
+                <span style={{ ...S.totalsVal, color: C.danger }}>− {formatRp(discountAmt)}</span>
+              </div>
             )}
             {taxRate > 0 && (
-              <TotalRow label={`Pajak (${taxRate}%)`} value={formatRp(taxAmt)} />
+              <div style={S.totalsRow}>
+                <span style={S.totalsLabel}>Pajak ({taxRate}%)</span>
+                <span style={S.totalsVal}>{formatRp(taxAmt)}</span>
+              </div>
             )}
-            <div className="flex justify-between items-center px-4 py-3 bg-blue-700 text-white">
-              <span className="font-extrabold text-[15px]">Total</span>
-              <span className="font-extrabold text-[15px]">{formatRp(total)}</span>
+            <div style={S.totalsFinal}>
+              <span style={S.totalsFinalLabel}>Total</span>
+              <span style={S.totalsFinalVal}>{formatRp(total)}</span>
             </div>
           </div>
         </div>
 
-        {/* LUNAS stamp — sits below signatures, not overlapping */}
-        <div className="flex justify-start mt-2 ml-2">
-          <div
-            className="inline-flex items-center justify-center px-6 py-2 border-[3px] border-double border-red-500/60 rounded-lg -rotate-[12deg]"
-            aria-label="Lunas"
-            style={{ mixBlendMode: 'multiply' }}
-          >
-            <span className="text-2xl font-black text-red-500/60 tracking-[0.25em] uppercase select-none">
-              LUNAS
-            </span>
-          </div>
-        </div>
-
         {/* Footer note */}
-        <div className="text-center text-[11px] text-slate-400 mt-8 pt-5 border-t border-dashed border-slate-200">
-          Terima kasih atas kepercayaan Anda! &middot; Barang yang sudah dibeli tidak dapat dikembalikan.
+        <div style={S.note}>
+          ✦&nbsp; Terima kasih atas kepercayaan Anda &nbsp;✦<br />
+          Simpan nota ini sebagai bukti transaksi yang sah.&nbsp;&nbsp;Barang yang sudah dibeli tidak dapat dikembalikan.
         </div>
       </div>
+
+      {/* Corner decoration */}
+      <div style={S.cornerTri} />
+      <div style={S.cornerDot} />
     </div>
   );
 });
+
 PreviewView.displayName = 'PreviewView';
-
-/* ── Small helper components ── */
-
-function MetaRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex gap-2 text-[12.5px]">
-      <span className="text-slate-500 font-medium min-w-[140px] shrink-0">{label}</span>
-      <span className="font-semibold text-slate-900 break-words">{value}</span>
-    </div>
-  );
-}
-
-function SignatureBox({ label }: { label: string }) {
-  return (
-    <div className="text-center min-w-[110px]">
-      <div className="h-14" />
-      <div className="border-t border-slate-400 mb-1" />
-      <div className="text-[11px] text-slate-500 font-medium">{label}</div>
-    </div>
-  );
-}
-
-function TotalRow({
-  label,
-  value,
-  valueClass = 'text-slate-900',
-}: {
-  label: string;
-  value: string;
-  valueClass?: string;
-}) {
-  return (
-    <div className="flex justify-between items-center px-4 py-2.5 text-[12.5px] border-b border-slate-200 last:border-0">
-      <span className="text-slate-500">{label}</span>
-      <span className={`font-semibold ${valueClass}`}>{value}</span>
-    </div>
-  );
-}

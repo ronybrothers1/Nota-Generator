@@ -28,22 +28,20 @@ const makeDefaultData = (): InvoiceData => ({
 type ToastType = 'success' | 'error' | 'info';
 
 export default function App() {
-  const [data, setData] = useState<InvoiceData>(makeDefaultData);
-  const [view, setView] = useState<'form' | 'preview'>('form');
-  const [toastMsg, setToastMsg] = useState<{ text: string; type: ToastType } | null>(null);
-  const [hasDraft, setHasDraft] = useState(false);
-  const [draftDate, setDraftDate] = useState<string>('');
+  const [data, setData]                   = useState<InvoiceData>(makeDefaultData);
+  const [view, setView]                   = useState<'form' | 'preview'>('form');
+  const [toastMsg, setToastMsg]           = useState<{ text: string; type: ToastType } | null>(null);
+  const [hasDraft, setHasDraft]           = useState(false);
+  const [draftDate, setDraftDate]         = useState<string>('');
   const [isPdfGenerating, setIsPdfGenerating] = useState(false);
   const receiptRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    checkDraft();
-  }, []);
+  useEffect(() => { checkDraft(); }, []);
 
   useEffect(() => {
     if (!toastMsg) return;
-    const timer = setTimeout(() => setToastMsg(null), 3500);
-    return () => clearTimeout(timer);
+    const t = setTimeout(() => setToastMsg(null), 3500);
+    return () => clearTimeout(t);
   }, [toastMsg]);
 
   const showToast = useCallback((text: string, type: ToastType = 'info') => {
@@ -57,12 +55,8 @@ export default function App() {
       const parsed = JSON.parse(raw);
       setHasDraft(true);
       const d = new Date(parsed.savedAt);
-      setDraftDate(
-        `${d.toLocaleDateString('id-ID')} ${d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`
-      );
-    } catch {
-      setHasDraft(false);
-    }
+      setDraftDate(`${d.toLocaleDateString('id-ID')} ${d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`);
+    } catch { setHasDraft(false); }
   };
 
   const saveDraft = () => {
@@ -70,21 +64,18 @@ export default function App() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...data, savedAt: new Date().toISOString() }));
       showToast('Draft tersimpan!', 'success');
       checkDraft();
-    } catch {
-      showToast('Gagal menyimpan draft.', 'error');
-    }
+    } catch { showToast('Gagal menyimpan draft.', 'error'); }
   };
 
   const restoreDraft = () => {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return;
     try {
-      const { savedAt: _savedAt, ...parsed } = JSON.parse(raw);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { savedAt: _, ...parsed } = JSON.parse(raw);
       setData(parsed as InvoiceData);
       showToast('Draft dipulihkan!', 'success');
-    } catch {
-      showToast('Gagal memulihkan draft.', 'error');
-    }
+    } catch { showToast('Gagal memulihkan draft.', 'error'); }
   };
 
   const clearDraft = () => {
@@ -101,23 +92,23 @@ export default function App() {
   };
 
   const validate = (): boolean => {
-    if (!data.companyName.trim()) { showToast('Harap isi Nama Perusahaan', 'error'); return false; }
-    if (!data.notaNumber.trim()) { showToast('Harap isi Nomor Nota', 'error'); return false; }
-    if (!data.transactionDate) { showToast('Harap isi Tanggal Transaksi', 'error'); return false; }
-    if (!data.customerName.trim()) { showToast('Harap isi Nama Pelanggan', 'error'); return false; }
-    if (!data.cashierName.trim()) { showToast('Harap isi Nama Kasir', 'error'); return false; }
-    if (data.items.length === 0) { showToast('Tambahkan minimal satu item.', 'error'); return false; }
+    if (!data.companyName.trim())    { showToast('Harap isi Nama Perusahaan', 'error');    return false; }
+    if (!data.notaNumber.trim())     { showToast('Harap isi Nomor Nota', 'error');         return false; }
+    if (!data.transactionDate)       { showToast('Harap isi Tanggal Transaksi', 'error');  return false; }
+    if (!data.customerName.trim())   { showToast('Harap isi Nama Pelanggan', 'error');     return false; }
+    if (!data.cashierName.trim())    { showToast('Harap isi Nama Kasir', 'error');         return false; }
+    if (data.items.length === 0)     { showToast('Tambahkan minimal satu item.', 'error'); return false; }
 
     for (let i = 0; i < data.items.length; i++) {
       const item = data.items[i];
-      if (!item.name.trim()) { showToast(`Nama barang/jasa pada item #${i + 1} harus diisi.`, 'error'); return false; }
-      if (Number(item.qty) < 1) { showToast(`Jumlah item #${i + 1} harus minimal 1.`, 'error'); return false; }
-      if (Number(item.price) < 0) { showToast(`Harga item #${i + 1} tidak valid.`, 'error'); return false; }
+      if (!item.name.trim())      { showToast(`Nama barang/jasa item #${i + 1} harus diisi.`, 'error'); return false; }
+      if (Number(item.qty) < 1)   { showToast(`Jumlah item #${i + 1} harus minimal 1.`, 'error');      return false; }
+      if (Number(item.price) < 0) { showToast(`Harga item #${i + 1} tidak valid.`, 'error');           return false; }
     }
 
-    const tax = Number(data.taxRate);
+    const tax  = Number(data.taxRate);
     const disc = Number(data.discountRate);
-    if (isNaN(tax) || tax < 0 || tax > 100) { showToast('Pajak harus antara 0–100%.', 'error'); return false; }
+    if (isNaN(tax)  || tax  < 0 || tax  > 100) { showToast('Pajak harus antara 0–100%.', 'error');  return false; }
     if (isNaN(disc) || disc < 0 || disc > 100) { showToast('Diskon harus antara 0–100%.', 'error'); return false; }
 
     return true;
@@ -134,54 +125,51 @@ export default function App() {
     if (!validate()) return;
     if (view === 'form') {
       setView('preview');
-      // Give React time to render the preview before printing
-      setTimeout(() => window.print(), 400);
+      setTimeout(() => window.print(), 450);
     } else {
       window.print();
     }
   };
 
   const handleDownload = async () => {
-    if (!validate()) return;
-    if (isPdfGenerating) return;
+    if (!validate() || isPdfGenerating) return;
 
     setIsPdfGenerating(true);
     showToast('Membuat PDF, harap tunggu...', 'info');
 
-    // Switch to preview first if needed
+    // Switch to preview so the element renders
     if (view === 'form') {
       setView('preview');
-      // Wait for React to render + fonts to load
-      await new Promise(r => setTimeout(r, 600));
+      // Wait for React render + browser paint (two animation frames)
+      await new Promise<void>(r => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+      // Extra buffer for fonts
+      await new Promise(r => setTimeout(r, 400));
     }
 
-    // Retry a few times waiting for ref to attach
+    // Retry up to 15 × 80 ms waiting for the ref to attach
     let attempts = 0;
-    while (!receiptRef.current && attempts < 10) {
-      await new Promise(r => setTimeout(r, 100));
+    while (!receiptRef.current && attempts < 15) {
+      await new Promise(r => setTimeout(r, 80));
       attempts++;
     }
 
     if (!receiptRef.current) {
-      showToast('Terjadi kesalahan: elemen tidak ditemukan. Coba lagi.', 'error');
+      showToast('Elemen nota tidak ditemukan. Coba klik pratinjau dulu.', 'error');
       setIsPdfGenerating(false);
       return;
     }
 
-    const filename = data.notaNumber.trim().replace(/[^a-zA-Z0-9\-_]/g, '_') || 'nota';
-    const success = await generatePDF(receiptRef.current, filename);
+    const filename = data.notaNumber.trim() || 'nota';
+    const ok = await generatePDF(receiptRef.current, filename);
 
-    if (success) {
-      showToast('PDF berhasil diunduh!', 'success');
-    } else {
-      showToast('Gagal membuat PDF. Coba gunakan tombol Print.', 'error');
-    }
+    showToast(ok ? 'PDF berhasil diunduh!' : 'Gagal membuat PDF. Coba gunakan Print.', ok ? 'success' : 'error');
     setIsPdfGenerating(false);
   };
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-16">
-      {/* Topbar */}
+
+      {/* ── Top bar ── */}
       <header className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-50 shadow-sm print:hidden">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-gradient-to-br from-blue-700 to-sky-500 rounded-md flex items-center justify-center text-white shrink-0">
@@ -213,8 +201,8 @@ export default function App() {
           />
         ) : (
           <div className="space-y-4">
-            {/* Preview action bar */}
-            <div className="flex flex-wrap gap-2 sm:gap-3 justify-between print:hidden bg-white border border-slate-200 rounded-xl p-3 sm:p-4 shadow-sm">
+            {/* Preview toolbar */}
+            <div className="flex flex-wrap gap-2 sm:gap-3 items-center justify-between print:hidden bg-white border border-slate-200 rounded-xl p-3 sm:p-4 shadow-sm">
               <Button variant="ghost" onClick={() => setView('form')} size="sm">
                 <ArrowLeft className="w-4 h-4" />
                 <span>Kembali ke Form</span>
@@ -222,18 +210,22 @@ export default function App() {
               <div className="flex gap-2 sm:gap-3">
                 <Button variant="sky" onClick={handlePrint} size="sm">
                   <Printer className="w-4 h-4" />
-                  <span className="hidden sm:inline">Print</span>
+                  <span>Print</span>
                 </Button>
                 <Button variant="success" onClick={handleDownload} disabled={isPdfGenerating} size="sm">
                   <Download className="w-4 h-4" />
-                  <span className="hidden sm:inline">{isPdfGenerating ? 'Memproses...' : 'Download PDF'}</span>
+                  <span>{isPdfGenerating ? 'Memproses...' : 'Download PDF'}</span>
                 </Button>
               </div>
             </div>
 
-            {/* Preview container — scrollable on small screens */}
-            <div className="overflow-x-auto pb-8 -mx-4 px-4 sm:mx-0 sm:px-0">
-              <div className="w-[794px] mx-auto shadow-lg rounded-2xl">
+            {/* Preview canvas area — horizontal scroll on small screens */}
+            <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pb-8">
+              {/*
+                The inner wrapper is the actual PDF target.
+                We give it a neutral background and let PreviewView own its own width.
+              */}
+              <div className="w-[794px] mx-auto">
                 <PreviewView data={data} ref={receiptRef} />
               </div>
             </div>
@@ -246,20 +238,22 @@ export default function App() {
         Dikembangkan oleh Imam Sahroni Darmawan
       </footer>
 
-      {/* Toast */}
+      {/* Toast notification */}
       <div
         aria-live="polite"
         className={cn(
-          'fixed bottom-6 right-4 sm:right-6 px-4 py-3 rounded-xl text-[13px] font-medium shadow-xl max-w-[calc(100vw-2rem)] sm:max-w-xs z-[999] flex items-center gap-2 transition-all duration-300',
+          'fixed bottom-6 right-4 sm:right-6 px-4 py-3 rounded-xl text-[13px] font-medium shadow-xl',
+          'max-w-[calc(100vw-2rem)] sm:max-w-xs z-[999] flex items-center gap-2',
+          'transition-all duration-300',
           toastMsg ? 'translate-y-0 opacity-100' : 'translate-y-24 opacity-0 pointer-events-none',
-          toastMsg?.type === 'error' ? 'bg-red-500 text-white' :
+          toastMsg?.type === 'error'   ? 'bg-red-500 text-white'     :
           toastMsg?.type === 'success' ? 'bg-emerald-500 text-white' :
           'bg-slate-900 text-white'
         )}
       >
-        {toastMsg?.type === 'error' && <AlertCircle className="w-4 h-4 shrink-0" />}
-        {toastMsg?.type === 'success' && <CheckCircle2 className="w-4 h-4 shrink-0" />}
-        {toastMsg?.type === 'info' && <Info className="w-4 h-4 shrink-0" />}
+        {toastMsg?.type === 'error'   && <AlertCircle   className="w-4 h-4 shrink-0" />}
+        {toastMsg?.type === 'success' && <CheckCircle2  className="w-4 h-4 shrink-0" />}
+        {toastMsg?.type === 'info'    && <Info          className="w-4 h-4 shrink-0" />}
         <span>{toastMsg?.text}</span>
       </div>
     </div>

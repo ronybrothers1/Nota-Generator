@@ -1,93 +1,140 @@
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
-export const generatePDF = async (container: HTMLElement, filename: string): Promise<boolean> => {
+/**
+ * Captures an HTML element and exports it as a crisp, properly-scaled A4 PDF.
+ *
+ * Strategy:
+ *  1. Temporarily pin the element to 794 px wide in the DOM so html2canvas
+ *     always gets a consistent layout regardless of the viewport.
+ *  2. Render at 2× scale for retina-quality output.
+ *  3. Map the canvas to mm and place on A4 page(s) with equal margins.
+ *  4. For tall content, slice the canvas and add extra pages cleanly.
+ */
+export const generatePDF = async (
+  container: HTMLElement,
+  filename: string
+): Promise<boolean> => {
+  // ── 1. Snapshot the element's original inline style ──────────────────────
+  const prevStyle = {
+    width:     container.style.width,
+    minWidth:  container.style.minWidth,
+    maxWidth:  container.style.maxWidth,
+    position:  container.style.position,
+    left:      container.style.left,
+    top:       container.style.top,
+  };
+
+  // Force a known render width so html2canvas measures the layout correctly.
+  // 794 px ≈ A4 at 96 dpi (210 mm × 3.7795 px/mm).
+  container.style.width    = '794px';
+  container.style.minWidth = '794px';
+  container.style.maxWidth = '794px';
+
+  // Small yield so the browser can reflow
+  await new Promise<void>(r => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+
+  let canvas: HTMLCanvasElement;
   try {
-    // Temporarily force the element to have a known width for consistent rendering
-    const originalStyle = container.getAttribute('style') || '';
-    container.style.width = '794px';
-    container.style.maxWidth = '794px';
-
-    const canvas = await html2canvas(container, {
-      scale: 2,           // 2x for retina-like quality
-      useCORS: true,
-      allowTaint: true,
+    canvas = await html2canvas(container, {
+      scale:           2,          // 2× → ~192 dpi equivalent
+      useCORS:         true,
+      allowTaint:      true,
       backgroundColor: '#ffffff',
-      logging: false,
-      // Scroll to top so nothing is clipped
-      scrollX: 0,
-      scrollY: 0,
-      windowWidth: 794,
+      logging:         false,
+      // Render from the element's own origin, ignoring page scroll
+      scrollX: -window.scrollX,
+      scrollY: -window.scrollY,
+      windowWidth:  794,
+      // Give html2canvas the exact pixel width to avoid off-by-one rounding
+      width:  container.offsetWidth,
+      height: container.offsetHeight,
     });
+  } finally {
+    // ── 2. Restore original style (always, even if capture fails) ───────────
+    container.style.width    = prevStyle.width;
+    container.style.minWidth = prevStyle.minWidth;
+    container.style.maxWidth = prevStyle.maxWidth;
+    container.style.position = prevStyle.position;
+    container.style.left     = prevStyle.left;
+    container.style.top      = prevStyle.top;
+  }
 
-    // Restore original style
-    container.setAttribute('style', originalStyle);
+  try {
+    // ── 3. Build the PDF ────────────────────────────────────────────────────
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
 
-    const imgData = canvas.toDataURL('image/jpeg', 0.97);
+    const PAGE_W_MM  = 210;
+    const PAGE_H_MM  = 297;
+    const MARGIN_MM  = 8;
+    const USABLE_W   = PAGE_W_MM - MARGIN_MM * 2;   // 194 mm
+    const USABLE_H   = PAGE_H_MM - MARGIN_MM * 2;   // 281 mm
 
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4',
-      compress: true,
-    });
+    // Scale factor: how many mm per canvas pixel
+    const mmPerPx = USABLE_W / canvas.width;
 
-    const pageWidthMm = 210;
-    const pageHeightMm = 297;
-    const marginMm = 8;
-    const usableWidthMm = pageWidthMm - marginMm * 2;
+    // Total rendered height in mm
+    const totalH_MM = canvas.height * mmPerPx;
 
-    // Calculate rendered image height in mm
-    const imgHeightMm = (canvas.height * usableWidthMm) / canvas.width;
-
-    if (imgHeightMm <= pageHeightMm - marginMm * 2) {
-      // Single page
-      pdf.addImage(imgData, 'JPEG', marginMm, marginMm, usableWidthMm, imgHeightMm);
+    if (totalH_MM <= USABLE_H) {
+      // ─ Single page ────────────────────────────────────────────────────────
+      pdf.addImage(
+        canvas.toDataURL('image/jpeg', 0.96),
+        'JPEG',
+        MARGIN_MM,
+        MARGIN_MM,
+        USABLE_W,
+        totalH_MM,
+      );
     } else {
-      // Multi-page: slice the canvas image
-      const usableHeightMm = pageHeightMm - marginMm * 2;
-      const canvasWidthPx = canvas.width;
-      const canvasHeightPx = canvas.height;
+      // ─ Multi-page: slice the canvas row by row ─────────────────────────
+      // How many canvas pixels fit into one usable page height
+      const pageH_Px = Math.floor(USABLE_H / mmPerPx);
 
-      // How many canvas pixels correspond to one usable page height
-      const pageHeightPx = Math.floor((usableHeightMm / imgHeightMm) * canvasHeightPx);
+      let yPx    = 0;
+      let pageNo = 0;
 
-      let yOffsetPx = 0;
-      let pageIndex = 0;
+      while (yPx < canvas.height) {
+        const sliceH_Px = Math.min(pageH_Px, canvas.height - yPx);
 
-      while (yOffsetPx < canvasHeightPx) {
-        const sliceHeightPx = Math.min(pageHeightPx, canvasHeightPx - yOffsetPx);
+        const slice    = document.createElement('canvas');
+        slice.width    = canvas.width;
+        slice.height   = sliceH_Px;
+        const ctx      = slice.getContext('2d')!;
+        ctx.fillStyle  = '#ffffff';
+        ctx.fillRect(0, 0, slice.width, slice.height);
+        ctx.drawImage(canvas, 0, -yPx);
 
-        // Create a temporary canvas for this slice
-        const sliceCanvas = document.createElement('canvas');
-        sliceCanvas.width = canvasWidthPx;
-        sliceCanvas.height = sliceHeightPx;
-        const ctx = sliceCanvas.getContext('2d');
-        if (!ctx) break;
+        const sliceH_MM = sliceH_Px * mmPerPx;
 
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, canvasWidthPx, sliceHeightPx);
-        ctx.drawImage(canvas, 0, -yOffsetPx);
+        if (pageNo > 0) pdf.addPage();
+        pdf.addImage(
+          slice.toDataURL('image/jpeg', 0.96),
+          'JPEG',
+          MARGIN_MM,
+          MARGIN_MM,
+          USABLE_W,
+          sliceH_MM,
+        );
 
-        const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.97);
-        const sliceHeightMm = (sliceHeightPx / canvasHeightPx) * imgHeightMm;
-
-        if (pageIndex > 0) pdf.addPage();
-        pdf.addImage(sliceData, 'JPEG', marginMm, marginMm, usableWidthMm, sliceHeightMm);
-
-        yOffsetPx += sliceHeightPx;
-        pageIndex++;
+        yPx    += sliceH_Px;
+        pageNo += 1;
       }
     }
 
-    pdf.save(`${sanitizeFilename(filename)}.pdf`);
+    pdf.save(`${sanitize(filename)}.pdf`);
     return true;
+
   } catch (err) {
-    console.error('[generatePDF] Error:', err);
+    console.error('[generatePDF]', err);
     return false;
   }
 };
 
-function sanitizeFilename(name: string): string {
-  return name.replace(/[^a-zA-Z0-9\-_]/g, '_').replace(/_+/g, '_').slice(0, 100) || 'nota';
+function sanitize(name: string): string {
+  return (name || 'nota')
+    .replace(/[^a-zA-Z0-9\-_]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '')
+    .slice(0, 80) || 'nota';
 }
