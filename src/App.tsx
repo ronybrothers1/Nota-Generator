@@ -6,6 +6,7 @@ import { generatePDF } from './utils/pdf';
 import { Download, Printer, ArrowLeft, CheckCircle2, AlertCircle, Info } from 'lucide-react';
 import { Button } from './components/ui/Button';
 import { cn } from './utils/cn';
+import { useReactToPrint } from 'react-to-print';
 
 const STORAGE_KEY = 'nota_draft_v1';
 
@@ -114,13 +115,19 @@ export default function App() {
 
     for (let i = 0; i < data.items.length; i++) {
       const item = data.items[i];
+      const qty = parseFloat(item.qty as string) || 0;
+      const price = parseFloat(item.price as string) || 0;
+      
       if (!item.name.trim()) { showToast(`Nama barang/jasa pada item #${i + 1} harus diisi.`, 'error'); return false; }
-      if (item.qty < 1) { showToast(`Jumlah item #${i + 1} harus minimal 1.`, 'error'); return false; }
-      if (item.price < 0) { showToast(`Harga item #${i + 1} tidak valid.`, 'error'); return false; }
+      if (qty < 1) { showToast(`Jumlah item #${i + 1} harus minimal 1.`, 'error'); return false; }
+      if (price < 0) { showToast(`Harga item #${i + 1} tidak valid.`, 'error'); return false; }
     }
 
-    if (data.taxRate < 0 || data.taxRate > 100) { showToast('Pajak harus antara 0–100%.', 'error'); return false; }
-    if (data.discountRate < 0 || data.discountRate > 100) { showToast('Diskon harus antara 0–100%.', 'error'); return false; }
+    const tax = parseFloat(data.taxRate as string) || 0;
+    const disc = parseFloat(data.discountRate as string) || 0;
+
+    if (tax < 0 || tax > 100) { showToast('Pajak harus antara 0–100%.', 'error'); return false; }
+    if (disc < 0 || disc > 100) { showToast('Diskon harus antara 0–100%.', 'error'); return false; }
 
     return true;
   };
@@ -132,13 +139,18 @@ export default function App() {
     }
   };
 
+  const reactToPrintFn = useReactToPrint({
+    contentRef: receiptRef,
+    documentTitle: data.notaNumber ? `Nota_${data.notaNumber}` : 'Nota',
+  });
+
   const handlePrint = () => {
     if (view === 'form' && !validate()) return;
     if (view === 'form') {
       setView('preview');
-      setTimeout(() => window.print(), 300);
+      setTimeout(() => reactToPrintFn(() => receiptRef.current), 300);
     } else {
-      window.print();
+      reactToPrintFn(() => receiptRef.current);
     }
   };
 
@@ -151,24 +163,32 @@ export default function App() {
     if (view === 'form') {
       setView('preview');
       // Wait for React to render the PreviewView and attach the ref
-      await new Promise(r => setTimeout(r, 500));
+      await new Promise(r => setTimeout(r, 800));
     }
 
     if (!receiptRef.current) {
-      showToast('Terjadi kesalahan sistem. Coba lagi.', 'error');
+      showToast('Terjadi kesalahan sistem (Ref null). Coba lagi.', 'error');
       setIsPdfGenerating(false);
       return;
     }
 
-    const filename = data.notaNumber.trim().replace(/[^a-zA-Z0-9-_]/g, '_') || 'nota';
-    const success = await generatePDF(receiptRef.current, filename);
-    
-    if (success) {
-      showToast('PDF berhasil diunduh!', 'success');
-    } else {
-      showToast('Gagal membuat PDF. Coba lagi.', 'error');
+    try {
+      const filename = data.notaNumber.trim().replace(/[^a-zA-Z0-9-_]/g, '_') || 'nota';
+      const success = await generatePDF(receiptRef.current, filename);
+      
+      if (success) {
+        showToast('PDF berhasil diunduh!', 'success');
+      } else {
+        showToast('Gagal membuat PDF. Menggunakan mode Print...', 'error');
+        setTimeout(() => reactToPrintFn(() => receiptRef.current), 1000);
+      }
+    } catch (error) {
+      console.error(error);
+      showToast('Gagal membuat PDF. Menggunakan mode Print...', 'error');
+      setTimeout(() => reactToPrintFn(() => receiptRef.current), 1000);
+    } finally {
+      setIsPdfGenerating(false);
     }
-    setIsPdfGenerating(false);
   };
 
   return (

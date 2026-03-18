@@ -313,11 +313,14 @@ export const FormView = ({
                     </td>
                     <td className="p-2">
                       <input 
-                        type="number"
-                        min="1"
+                        type="text"
+                        inputMode="numeric"
                         className="w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-blue-500 focus:bg-white rounded px-2 py-1.5 outline-none transition-all text-center"
                         value={item.qty}
-                        onChange={(e) => updateItem(item.id, 'qty', e.target.value === '' ? '' : e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9]/g, '');
+                          updateItem(item.id, 'qty', val);
+                        }}
                       />
                     </td>
                     <td className="p-2">
@@ -331,11 +334,14 @@ export const FormView = ({
                     </td>
                     <td className="p-2">
                       <input 
-                        type="number"
-                        min="0"
+                        type="text"
+                        inputMode="numeric"
                         className="w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-blue-500 focus:bg-white rounded px-2 py-1.5 outline-none transition-all text-right"
                         value={item.price}
-                        onChange={(e) => updateItem(item.id, 'price', e.target.value === '' ? '' : e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9]/g, '');
+                          updateItem(item.id, 'price', val);
+                        }}
                       />
                     </td>
                     <td className="p-2 text-center">
@@ -365,19 +371,25 @@ export const FormView = ({
               <div className="space-y-1.5 w-full md:w-32">
                 <Label>Pajak (%)</Label>
                 <Input 
-                  type="number" 
-                  min="0" max="100" 
+                  type="text" 
+                  inputMode="numeric"
                   value={data.taxRate} 
-                  onChange={(e) => updateData('taxRate', e.target.value === '' ? '' : e.target.value)} 
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9]/g, '');
+                    updateData('taxRate', val);
+                  }} 
                 />
               </div>
               <div className="space-y-1.5 w-full md:w-32">
                 <Label>Diskon (%)</Label>
                 <Input 
-                  type="number" 
-                  min="0" max="100" 
+                  type="text" 
+                  inputMode="numeric"
                   value={data.discountRate} 
-                  onChange={(e) => updateData('discountRate', e.target.value === '' ? '' : e.target.value)} 
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9]/g, '');
+                    updateData('discountRate', val);
+                  }} 
                 />
               </div>
             </div>
